@@ -3,7 +3,7 @@ module Main
         ( main
         )
 
-import Html exposing (Html, text, div, h1)
+import Html exposing (Html, text, div, h1, h2)
 import Html.Attributes as HA exposing (id, class)
 import Keyboard
 
@@ -23,8 +23,19 @@ type alias Player =
     }
 
 
+type GameOverReason
+    = FellInHole
+    | GotCheese
+
+
+type GameStatus
+    = Running
+    | GameOver GameOverReason
+
+
 type alias Model =
     { player : Player
+    , gameStatus : GameStatus
     }
 
 
@@ -61,11 +72,12 @@ view : Model -> Html Msg
 view model =
     div [ class "game-board" ]
         [ h1 [] [ text "Get The Cheese" ]
+        , h2 [] [ text <| "Status: " ++ toString model.gameStatus ]
         , gameBoardView model
         ]
 
 
-processPlayerMove : MoveDirection -> Model -> ( Model, Cmd Msg )
+processPlayerMove : MoveDirection -> Model -> Model
 processPlayerMove direction model =
     let
         positionOffset =
@@ -91,16 +103,37 @@ processPlayerMove direction model =
         updatedPlayer =
             { player | position = player.position + positionOffset }
     in
-        ( { model | player = updatedPlayer }
-        , Cmd.none
-        )
+        { model | player = updatedPlayer }
+
+
+processGameStatus : Model -> Model
+processGameStatus model =
+    let
+        newStatus =
+            case model.player.position of
+                0 ->
+                    GameOver FellInHole
+
+                9 ->
+                    GameOver GotCheese
+
+                _ ->
+                    Running
+    in
+        { model | gameStatus = newStatus }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         PlayerMove direction ->
-            processPlayerMove direction model
+            let
+                updatedModel =
+                    model
+                        |> processPlayerMove direction
+                        |> processGameStatus
+            in
+                ( updatedModel, Cmd.none )
 
 
 initialPlayer : Player
@@ -113,6 +146,7 @@ init =
     let
         initialModel =
             { player = initialPlayer
+            , gameStatus = Running
             }
     in
         ( initialModel
@@ -145,4 +179,7 @@ calculateDirection keycode =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Keyboard.ups (calculateDirection >> PlayerMove)
+    if model.gameStatus == Running then
+        Keyboard.ups (calculateDirection >> PlayerMove)
+    else
+        Sub.none
