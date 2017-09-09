@@ -35,46 +35,10 @@ type GameStatus
 
 type alias Model =
     { player : Player
+    , cheesePosition : Int
+    , holePosition : Int
     , gameStatus : GameStatus
     }
-
-
-playerIsAtIndex : Int -> Player -> Bool
-playerIsAtIndex index { position } =
-    index == position
-
-
-gameBoardView : Model -> Html Msg
-gameBoardView model =
-    let
-        content index =
-            case index of
-                0 ->
-                    text "O"
-
-                9 ->
-                    text "C"
-
-                _ ->
-                    if playerIsAtIndex index model.player then
-                        text "P"
-                    else
-                        text ""
-
-        makeDiv index =
-            div [ id <| "square-" ++ toString index ] [ content index ]
-    in
-        div [] <|
-            List.map makeDiv (List.range 0 9)
-
-
-view : Model -> Html Msg
-view model =
-    div [ class "game-board" ]
-        [ h1 [] [ text "Get The Cheese" ]
-        , h2 [] [ text <| "Status: " ++ toString model.gameStatus ]
-        , gameBoardView model
-        ]
 
 
 processPlayerMove : MoveDirection -> Model -> Model
@@ -110,15 +74,12 @@ processGameStatus : Model -> Model
 processGameStatus model =
     let
         newStatus =
-            case model.player.position of
-                0 ->
-                    GameOver FellInHole
-
-                9 ->
-                    GameOver GotCheese
-
-                _ ->
-                    Running
+            if model.player.position == model.holePosition then
+                GameOver FellInHole
+            else if model.player.position == model.cheesePosition then
+                GameOver GotCheese
+            else
+                Running
     in
         { model | gameStatus = newStatus }
 
@@ -146,6 +107,8 @@ init =
     let
         initialModel =
             { player = initialPlayer
+            , holePosition = 0
+            , cheesePosition = 9
             , gameStatus = Running
             }
     in
@@ -183,3 +146,32 @@ subscriptions model =
         Keyboard.ups (calculateDirection >> PlayerMove)
     else
         Sub.none
+
+
+gameBoardView : Model -> Html Msg
+gameBoardView model =
+    let
+        content index =
+            if index == model.holePosition then
+                text "O"
+            else if index == model.cheesePosition then
+                text "C"
+            else if index == model.player.position then
+                text "P"
+            else
+                text ""
+
+        makeDiv index =
+            div [ id <| "square-" ++ toString index ] [ content index ]
+    in
+        div [] <|
+            List.map makeDiv (List.range 0 9)
+
+
+view : Model -> Html Msg
+view model =
+    div [ class "game-board" ]
+        [ h1 [] [ text "Get The Cheese" ]
+        , h2 [] [ text <| "Status: " ++ toString model.gameStatus ]
+        , gameBoardView model
+        ]
