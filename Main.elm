@@ -74,10 +74,16 @@ processPlayerMove direction model =
                     0
 
                 MoveUp ->
-                    -1
+                    if player.position >= 1 then
+                        -1
+                    else
+                        0
 
                 MoveDown ->
-                    1
+                    if player.position <= 8 then
+                        1
+                    else
+                        0
 
         player =
             model.player
