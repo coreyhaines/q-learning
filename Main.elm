@@ -57,7 +57,10 @@ processPlayerMove direction model =
                     else
                         0
     in
-        { model | playerPosition = model.playerPosition + positionOffset }
+        { model
+            | playerPosition = model.playerPosition + positionOffset
+            , moveCount = model.moveCount + (Basics.abs positionOffset)
+        }
 
 
 processGameStatus : Model -> Model
@@ -87,16 +90,21 @@ update msg model =
                 ( updatedModel, Cmd.none )
 
 
+startNewGame : Model
+startNewGame =
+    { playerPosition = 5
+    , moveCount = 0
+    , holePosition = 0
+    , cheesePosition = 9
+    , gameStatus = Running
+    }
+
+
 init : ( Model, Cmd Msg )
 init =
     let
         initialModel =
-            { playerPosition = 5
-            , moveCount = 0
-            , holePosition = 0
-            , cheesePosition = 9
-            , gameStatus = Running
-            }
+            startNewGame
     in
         ( initialModel
         , Cmd.none
@@ -158,6 +166,6 @@ view : Model -> Html Msg
 view model =
     div [ class "game-board" ]
         [ h1 [] [ text "Get The Cheese" ]
-        , h2 [] [ text <| "Status: " ++ toString model.gameStatus ]
+        , h2 [] [ text <| "Status: " ++ toString model.gameStatus ++ " (" ++ toString model.moveCount ++ ")" ]
         , gameBoardView model
         ]
