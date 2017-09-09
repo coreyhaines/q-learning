@@ -18,11 +18,6 @@ type Msg
     = PlayerMove MoveDirection
 
 
-type alias Player =
-    { position : Int
-    }
-
-
 type GameOverReason
     = FellInHole
     | GotCheese
@@ -34,7 +29,8 @@ type GameStatus
 
 
 type alias Model =
-    { player : Player
+    { playerPosition : Int
+    , moveCount : Int
     , cheesePosition : Int
     , holePosition : Int
     , gameStatus : GameStatus
@@ -50,33 +46,27 @@ processPlayerMove direction model =
                     0
 
                 MoveUp ->
-                    if player.position >= 1 then
+                    if model.playerPosition >= 1 then
                         -1
                     else
                         0
 
                 MoveDown ->
-                    if player.position <= 8 then
+                    if model.playerPosition <= 8 then
                         1
                     else
                         0
-
-        player =
-            model.player
-
-        updatedPlayer =
-            { player | position = player.position + positionOffset }
     in
-        { model | player = updatedPlayer }
+        { model | playerPosition = model.playerPosition + positionOffset }
 
 
 processGameStatus : Model -> Model
 processGameStatus model =
     let
         newStatus =
-            if model.player.position == model.holePosition then
+            if model.playerPosition == model.holePosition then
                 GameOver FellInHole
-            else if model.player.position == model.cheesePosition then
+            else if model.playerPosition == model.cheesePosition then
                 GameOver GotCheese
             else
                 Running
@@ -97,16 +87,12 @@ update msg model =
                 ( updatedModel, Cmd.none )
 
 
-initialPlayer : Player
-initialPlayer =
-    { position = 5 }
-
-
 init : ( Model, Cmd Msg )
 init =
     let
         initialModel =
-            { player = initialPlayer
+            { playerPosition = 5
+            , moveCount = 0
             , holePosition = 0
             , cheesePosition = 9
             , gameStatus = Running
@@ -156,7 +142,7 @@ gameBoardView model =
                 text "O"
             else if index == model.cheesePosition then
                 text "C"
-            else if index == model.player.position then
+            else if index == model.playerPosition then
                 text "P"
             else
                 text ""
