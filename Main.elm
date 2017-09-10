@@ -23,11 +23,6 @@ type GameOverReason
     | GotCheese
 
 
-type GameStatus
-    = Running
-    | GameOver GameOverReason
-
-
 type alias Game =
     { playerPosition : Int
     , moveCount : Int
@@ -38,7 +33,6 @@ type alias Game =
 
 type alias Model =
     { currentGame : Game
-    , gameStatus : GameStatus
     , previousGames : List ( Game, GameOverReason )
     }
 
@@ -77,16 +71,20 @@ processPlayerMove direction model =
 
 processGameStatus : Model -> Model
 processGameStatus model =
-    let
-        newStatus =
-            if model.currentGame.playerPosition == model.currentGame.holePosition then
-                GameOver FellInHole
-            else if model.currentGame.playerPosition == model.currentGame.cheesePosition then
-                GameOver GotCheese
-            else
-                Running
-    in
-        { model | gameStatus = newStatus }
+    model
+
+
+
+-- let
+-- newStatus =
+-- if model.currentGame.playerPosition == model.currentGame.holePosition then
+-- GameOver FellInHole
+-- else if model.currentGame.playerPosition == model.currentGame.cheesePosition then
+-- GameOver GotCheese
+-- else
+-- Running
+-- in
+-- { model | gameStatus = newStatus }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -116,7 +114,6 @@ init =
     let
         initialModel =
             { currentGame = startNewGame
-            , gameStatus = Running
             , previousGames = []
             }
     in
@@ -150,10 +147,7 @@ calculateDirection keycode =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if model.gameStatus == Running then
-        Keyboard.ups (calculateDirection >> PlayerMove)
-    else
-        Sub.none
+    Keyboard.ups (calculateDirection >> PlayerMove)
 
 
 gameBoardView : Model -> Html Msg
@@ -180,6 +174,6 @@ view : Model -> Html Msg
 view model =
     div [ class "game-board" ]
         [ h1 [] [ text "Get The Cheese" ]
-        , h2 [] [ text <| "Status: " ++ toString model.gameStatus ++ " (" ++ toString model.currentGame.moveCount ++ ")" ]
+        , h2 [] [ text <| "Moves: " ++ toString model.currentGame.moveCount ]
         , gameBoardView model
         ]
