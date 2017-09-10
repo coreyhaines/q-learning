@@ -71,20 +71,18 @@ processPlayerMove direction model =
 
 processGameStatus : Model -> Model
 processGameStatus model =
-    model
-
-
-
--- let
--- newStatus =
--- if model.currentGame.playerPosition == model.currentGame.holePosition then
--- GameOver FellInHole
--- else if model.currentGame.playerPosition == model.currentGame.cheesePosition then
--- GameOver GotCheese
--- else
--- Running
--- in
--- { model | gameStatus = newStatus }
+    if model.currentGame.playerPosition == model.currentGame.holePosition then
+        { model
+            | previousGames = ( model.currentGame, FellInHole ) :: model.previousGames
+            , currentGame = startNewGame
+        }
+    else if model.currentGame.playerPosition == model.currentGame.cheesePosition then
+        { model
+            | previousGames = ( model.currentGame, GotCheese ) :: model.previousGames
+            , currentGame = startNewGame
+        }
+    else
+        model
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
