@@ -145,7 +145,11 @@ calculateDirection keycode =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Keyboard.ups (calculateDirection >> PlayerMove)
+    let
+        sub =
+            Keyboard.ups calculateDirection
+    in
+        Sub.map PlayerMove sub
 
 
 gameBoardView : Model -> Html Msg
