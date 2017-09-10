@@ -6,8 +6,10 @@ module Main
 import Html exposing (Html, text, div, h1, h2, button)
 import Html.Attributes as HA exposing (id, class)
 import Html.Events exposing (onClick)
+import Random exposing (Seed)
 import Keyboard
 import Time
+import List.Extra as List
 
 
 type MoveDirection
@@ -23,7 +25,7 @@ type PlayerType
 
 playerType : PlayerType
 playerType =
-    HumanPlayer
+    AIPlayer
 
 
 type MoveInfo
@@ -57,6 +59,11 @@ type alias Game =
 
 type alias Model =
     { score : Int
+    , oldScore : Int
+    , previousMove : MoveDirection
+    , oldState : Int
+    , randomFloat : ( Float, Seed )
+    , nextMove : ( MoveDirection, Seed )
     , totalStatus : TotalStatus
     , currentGame : Game
     , previousGames : List ( Game, GameOverReason )
@@ -94,7 +101,10 @@ processPlayerMove direction model =
                 , moveCount = currentGame.moveCount + (Basics.abs positionOffset)
             }
     in
-        { model | currentGame = updatedCurrentGame }
+        { model
+            | currentGame = updatedCurrentGame
+            , previousMove = direction
+        }
 
 
 processGameStatus : Model -> Model
@@ -161,10 +171,18 @@ startNewGame =
 init : ( Model, Cmd Msg )
 init =
     let
+        newGame =
+            startNewGame
+
         initialModel =
             { totalStatus = Running
             , score = 0
-            , currentGame = startNewGame
+            , oldScore = 0
+            , oldState = newGame.playerPosition
+            , randomFloat = ( 0.0, Random.initialSeed 10234 )
+            , nextMove = ( MoveNone, Random.initialSeed 23232 )
+            , previousMove = MoveNone
+            , currentGame = newGame
             , previousGames = []
             , paused = False
             , qtable = initialQTable
@@ -276,21 +294,30 @@ view model =
 
         Lost ->
             div []
-                [ text "YOU LOST" ]
+                [ text "YOU LOST"
+                , previousGamesView model
+                ]
 
         Won ->
             div []
-                [ text "YOU WON" ]
+                [ text "YOU WON"
+                , previousGamesView model
+                ]
 
 
 epsilon : Float
 epsilon =
-    0.9
+    0.5
 
 
 discount : Float
 discount =
     0.9
+
+
+learningRate : Float
+learningRate =
+    0.2
 
 
 type alias QTable =
@@ -317,7 +344,99 @@ initialQTable =
 processCalculatedPlayerMove : Model -> Model
 processCalculatedPlayerMove model =
     let
-        nextSeed =
-            0.3
+        reward model =
+            Debug.log "reward" <|
+                if model.oldScore < model.score then
+                    1
+                else if model.oldScore > model.score then
+                    -1
+                else
+                    0
+
+        outcomeState model =
+            model.currentGame.playerPosition
+
+        calculateNewActionReward model ( state, up, down ) =
+            Debug.log "Updated QTable Row" <|
+                case model.previousMove of
+                    MoveNone ->
+                        ( state, up, down )
+
+                    MoveUp ->
+                        ( state
+                        , up
+                            + learningRate
+                            * ((reward model)
+                                + discount
+                                + (Maybe.withDefault 0 <| List.maximum [ up, down ])
+                                - up
+                              )
+                        , down
+                        )
+
+                    MoveDown ->
+                        ( state
+                        , up
+                        , down
+                            + learningRate
+                            * ((reward model)
+                                + discount
+                                + (Maybe.withDefault 0 <| List.maximum [ up, down ])
+                                - down
+                              )
+                        )
+
+        updateQTable model =
+            List.updateIf (\( state, _, _ ) -> state == model.currentGame.playerPosition) (calculateNewActionReward model) model.qtable
+
+        nextFloat model =
+            let
+                generator =
+                    Random.float 0 1
+            in
+                Random.step generator (Tuple.second model.randomFloat)
+
+        randomMove model =
+            let
+                generator =
+                    Random.bool
+                        |> Random.map
+                            (\choice ->
+                                if choice then
+                                    MoveUp
+                                else
+                                    MoveDown
+                            )
+            in
+                Random.step generator (Tuple.second model.nextMove)
+
+        findMoveFromQTable model =
+            List.find (\( state, _, _ ) -> state == model.currentGame.playerPosition)
+                model.qtable
+                |> Maybe.map
+                    (\( _, up, down ) ->
+                        if up > down then
+                            MoveUp
+                        else
+                            MoveDown
+                    )
+                |> Maybe.withDefault MoveNone
+
+        nextMove model =
+            if (Tuple.first model.randomFloat) > epsilon then
+                randomMove model
+            else
+                ( findMoveFromQTable model, Tuple.second model.nextMove )
+
+        updatedModel model =
+            { model
+                | oldScore = model.score
+                , oldState = model.currentGame.playerPosition
+                , qtable = updateQTable model
+                , randomFloat = nextFloat model
+                , nextMove = nextMove model
+            }
     in
         model
+            |> updatedModel
+            |> processPlayerMove (Tuple.first model.nextMove)
