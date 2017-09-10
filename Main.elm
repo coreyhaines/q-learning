@@ -164,14 +164,32 @@ gameBoardView model =
         makeDiv index =
             div [ id <| "square-" ++ toString index ] [ content index ]
     in
-        div [] <|
+        div [ class "game-board" ] <|
             List.map makeDiv (List.range 0 9)
+
+
+previousGameView : ( Game, GameOverReason ) -> Html Msg
+previousGameView ( game, gameOverReason ) =
+    let
+        description =
+            toString gameOverReason ++ " in " ++ toString game.moveCount ++ " move(s)."
+    in
+        div []
+            [ text description ]
+
+
+previousGamesView : Model -> Html Msg
+previousGamesView model =
+    div [] <|
+        List.map previousGameView model.previousGames
 
 
 view : Model -> Html Msg
 view model =
-    div [ class "game-board" ]
+    div []
         [ h1 [] [ text "Get The Cheese" ]
         , h2 [] [ text <| "Moves: " ++ toString model.currentGame.moveCount ]
         , gameBoardView model
+        , h2 [] [ text <| "Previous Games" ]
+        , previousGamesView model
         ]

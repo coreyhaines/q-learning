@@ -1,6 +1,4 @@
 .game-board div {
-  display: inline-block;
-  position: relative;
   border: 1px dotted blue;
   width: 30px;
   height: 30px;
