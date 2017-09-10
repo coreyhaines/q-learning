@@ -23,7 +23,7 @@ type PlayerType
 
 playerType : PlayerType
 playerType =
-    AIPlayer
+    HumanPlayer
 
 
 type MoveInfo
@@ -41,6 +41,12 @@ type GameOverReason
     | GotCheese
 
 
+type TotalStatus
+    = Running
+    | Lost
+    | Won
+
+
 type alias Game =
     { playerPosition : Int
     , moveCount : Int
@@ -50,7 +56,9 @@ type alias Game =
 
 
 type alias Model =
-    { currentGame : Game
+    { score : Int
+    , totalStatus : TotalStatus
+    , currentGame : Game
     , previousGames : List ( Game, GameOverReason )
     , paused : Bool
     }
@@ -94,19 +102,26 @@ processGameStatus model =
         { model
             | previousGames = ( model.currentGame, FellInHole ) :: model.previousGames
             , currentGame = startNewGame
+            , score = model.score - 1
         }
     else if model.currentGame.playerPosition == model.currentGame.cheesePosition then
         { model
             | previousGames = ( model.currentGame, GotCheese ) :: model.previousGames
             , currentGame = startNewGame
+            , score = model.score + 1
         }
     else
         model
 
 
-processCalculatedPlayerMove : Model -> Model
-processCalculatedPlayerMove model =
-    model
+processEndStatus : Model -> Model
+processEndStatus model =
+    if model.score <= -5 then
+        { model | totalStatus = Lost }
+    else if model.score >= 5 then
+        { model | totalStatus = Won }
+    else
+        model
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -120,7 +135,7 @@ update msg model =
         PlayerMove moveInfo ->
             let
                 updatedModel =
-                    processGameStatus <|
+                    (processGameStatus >> processEndStatus) <|
                         case moveInfo of
                             Manual direction ->
                                 model
@@ -146,7 +161,9 @@ init : ( Model, Cmd Msg )
 init =
     let
         initialModel =
-            { currentGame = startNewGame
+            { totalStatus = Running
+            , score = 0
+            , currentGame = startNewGame
             , previousGames = []
             , paused = False
             }
@@ -191,7 +208,7 @@ playerSubscription model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if model.paused then
+    if model.paused || model.totalStatus /= Running then
         Sub.none
     else
         playerSubscription model
@@ -244,11 +261,61 @@ pauseButtonView model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ h1 [] [ text "Get The Cheese" ]
-        , pauseButtonView model
-        , h2 [] [ text <| "Moves: " ++ toString model.currentGame.moveCount ]
-        , gameBoardView model
-        , h2 [] [ text <| "Previous Games" ]
-        , previousGamesView model
-        ]
+    case model.totalStatus of
+        Running ->
+            div []
+                [ h1 [] [ text "Get The Cheese" ]
+                , pauseButtonView model
+                , h2 [] [ text <| "Score: " ++ toString model.score ]
+                , gameBoardView model
+                , h2 [] [ text <| "Previous Games" ]
+                , previousGamesView model
+                ]
+
+        Lost ->
+            div []
+                [ text "YOU LOST" ]
+
+        Won ->
+            div []
+                [ text "YOU WON" ]
+
+
+epsilon : Float
+epsilon =
+    0.9
+
+
+discount : Float
+discount =
+    0.9
+
+
+type alias QTable =
+    List ( Int, Float, Float )
+
+
+initialQTable : QTable
+initialQTable =
+    [ ( 0, 0.2, 0.6 )
+    , ( 1, -0.6, 0.6 )
+    , ( 2, -0.4, 0.5 )
+    , ( 3, -0.2, 0.3 )
+    , ( 4, -0.1, 0.3 )
+    , ( 5, 0, 0.2 )
+    , ( 6, 0, 0.5 )
+    , ( 7, 0.1, 0.6 )
+    , ( 8, 0.3, 0.8 )
+    , ( 9, 0.2, 1 )
+    , ( 10, 1, 0.5 )
+    , ( 11, 0.6, 0.2 )
+    ]
+
+
+processCalculatedPlayerMove : Model -> Model
+processCalculatedPlayerMove model =
+    let
+        nextSeed =
+            0.3
+    in
+        model
