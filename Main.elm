@@ -3,9 +3,11 @@ module Main
         ( main
         )
 
-import Html exposing (Html, text, div, h1, h2)
+import Html exposing (Html, text, div, h1, h2, button)
 import Html.Attributes as HA exposing (id, class)
+import Html.Events exposing (onClick)
 import Keyboard
+import Time
 
 
 type MoveDirection
@@ -16,6 +18,7 @@ type MoveDirection
 
 type Msg
     = PlayerMove MoveDirection
+    | TogglePause Bool
 
 
 type GameOverReason
@@ -34,6 +37,7 @@ type alias Game =
 type alias Model =
     { currentGame : Game
     , previousGames : List ( Game, GameOverReason )
+    , paused : Bool
     }
 
 
@@ -88,6 +92,11 @@ processGameStatus model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        TogglePause paused ->
+            ( { model | paused = paused }
+            , Cmd.none
+            )
+
         PlayerMove direction ->
             let
                 updatedModel =
@@ -113,6 +122,7 @@ init =
         initialModel =
             { currentGame = startNewGame
             , previousGames = []
+            , paused = False
             }
     in
         ( initialModel
@@ -143,13 +153,18 @@ calculateDirection keycode =
             MoveNone
 
 
+playerSubscription : Sub msg
+playerSubscription =
+    -- Keyboard.ups calculateDirection
+    Time.every (1 * Time.second) (\_ -> MoveUp)
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    let
-        sub =
-            Keyboard.ups calculateDirection
-    in
-        Sub.map PlayerMove sub
+    if model.paused then
+        Sub.none
+    else
+        Sub.map PlayerMove playerSubscription
 
 
 gameBoardView : Model -> Html Msg
@@ -188,10 +203,19 @@ previousGamesView model =
         List.map previousGameView model.previousGames
 
 
+pauseButtonView : Model -> Html Msg
+pauseButtonView model =
+    if model.paused then
+        button [ onClick (TogglePause False) ] [ text "Unpause" ]
+    else
+        button [ onClick (TogglePause True) ] [ text "Pause" ]
+
+
 view : Model -> Html Msg
 view model =
     div []
         [ h1 [] [ text "Get The Cheese" ]
+        , pauseButtonView model
         , h2 [] [ text <| "Moves: " ++ toString model.currentGame.moveCount ]
         , gameBoardView model
         , h2 [] [ text <| "Previous Games" ]
