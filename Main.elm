@@ -61,6 +61,7 @@ type alias Model =
     , currentGame : Game
     , previousGames : List ( Game, GameOverReason )
     , paused : Bool
+    , qtable : QTable
     }
 
 
@@ -166,6 +167,7 @@ init =
             , currentGame = startNewGame
             , previousGames = []
             , paused = False
+            , qtable = initialQTable
             }
     in
         ( initialModel
