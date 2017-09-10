@@ -28,11 +28,16 @@ type GameStatus
     | GameOver GameOverReason
 
 
-type alias Model =
+type alias Game =
     { playerPosition : Int
     , moveCount : Int
     , cheesePosition : Int
     , holePosition : Int
+    }
+
+
+type alias Model =
+    { currentGame : Game
     , gameStatus : GameStatus
     }
 
@@ -46,30 +51,36 @@ processPlayerMove direction model =
                     0
 
                 MoveUp ->
-                    if model.playerPosition >= 1 then
+                    if model.currentGame.playerPosition >= 1 then
                         -1
                     else
                         0
 
                 MoveDown ->
-                    if model.playerPosition <= 8 then
+                    if model.currentGame.playerPosition <= 8 then
                         1
                     else
                         0
+
+        currentGame =
+            model.currentGame
+
+        updatedCurrentGame =
+            { currentGame
+                | playerPosition = currentGame.playerPosition + positionOffset
+                , moveCount = currentGame.moveCount + (Basics.abs positionOffset)
+            }
     in
-        { model
-            | playerPosition = model.playerPosition + positionOffset
-            , moveCount = model.moveCount + (Basics.abs positionOffset)
-        }
+        { model | currentGame = updatedCurrentGame }
 
 
 processGameStatus : Model -> Model
 processGameStatus model =
     let
         newStatus =
-            if model.playerPosition == model.holePosition then
+            if model.currentGame.playerPosition == model.currentGame.holePosition then
                 GameOver FellInHole
-            else if model.playerPosition == model.cheesePosition then
+            else if model.currentGame.playerPosition == model.currentGame.cheesePosition then
                 GameOver GotCheese
             else
                 Running
@@ -92,11 +103,13 @@ update msg model =
 
 startNewGame : Model
 startNewGame =
-    { playerPosition = 5
-    , moveCount = 0
-    , holePosition = 0
-    , cheesePosition = 9
-    , gameStatus = Running
+    { gameStatus = Running
+    , currentGame =
+        { playerPosition = 5
+        , moveCount = 0
+        , holePosition = 0
+        , cheesePosition = 9
+        }
     }
 
 
@@ -146,11 +159,11 @@ gameBoardView : Model -> Html Msg
 gameBoardView model =
     let
         content index =
-            if index == model.holePosition then
+            if index == model.currentGame.holePosition then
                 text "O"
-            else if index == model.cheesePosition then
+            else if index == model.currentGame.cheesePosition then
                 text "C"
-            else if index == model.playerPosition then
+            else if index == model.currentGame.playerPosition then
                 text "P"
             else
                 text ""
@@ -166,6 +179,6 @@ view : Model -> Html Msg
 view model =
     div [ class "game-board" ]
         [ h1 [] [ text "Get The Cheese" ]
-        , h2 [] [ text <| "Status: " ++ toString model.gameStatus ++ " (" ++ toString model.moveCount ++ ")" ]
+        , h2 [] [ text <| "Status: " ++ toString model.gameStatus ++ " (" ++ toString model.currentGame.moveCount ++ ")" ]
         , gameBoardView model
         ]
