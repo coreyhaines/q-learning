@@ -23,7 +23,7 @@ type PlayerType
 
 playerType : PlayerType
 playerType =
-    HumanPlayer
+    AIPlayer
 
 
 type MoveInfo
@@ -104,6 +104,12 @@ processGameStatus model =
         model
 
 
+processCalculatedPlayerMove : Model -> Model
+processCalculatedPlayerMove model =
+    model
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         TogglePause paused ->
@@ -112,24 +118,19 @@ update msg model =
             )
 
         PlayerMove moveInfo ->
-            case moveInfo of
-                Manual direction ->
-                    let
-                        updatedModel =
-                            model
-                                |> processPlayerMove direction
-                                |> processGameStatus
-                    in
-                        ( updatedModel, Cmd.none )
+            let
+                updatedModel =
+                    processGameStatus <|
+                        case moveInfo of
+                            Manual direction ->
+                                model
+                                    |> processPlayerMove direction
 
-                Calculated ->
-                    let
-                        updatedModel =
-                            model
-                                |> processPlayerMove MoveUp
-                                |> processGameStatus
-                    in
-                        ( updatedModel, Cmd.none )
+                            Calculated ->
+                                model
+                                    |> processCalculatedPlayerMove
+            in
+                ( updatedModel, Cmd.none )
 
 
 startNewGame : Game
