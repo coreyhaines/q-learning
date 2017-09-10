@@ -290,18 +290,21 @@ view model =
                 , gameBoardView model
                 , h2 [] [ text <| "Previous Games" ]
                 , previousGamesView model
+                , text <| toString model.qtable
                 ]
 
         Lost ->
             div []
                 [ text "YOU LOST"
                 , previousGamesView model
+                , text <| toString model.qtable
                 ]
 
         Won ->
             div []
                 [ text "YOU WON"
                 , previousGamesView model
+                , text <| toString model.qtable
                 ]
 
 
@@ -345,46 +348,44 @@ processCalculatedPlayerMove : Model -> Model
 processCalculatedPlayerMove model =
     let
         reward model =
-            Debug.log "reward" <|
-                if model.oldScore < model.score then
-                    1
-                else if model.oldScore > model.score then
-                    -1
-                else
-                    0
+            if model.oldScore < model.score then
+                1
+            else if model.oldScore > model.score then
+                -1
+            else
+                0
 
         outcomeState model =
             model.currentGame.playerPosition
 
         calculateNewActionReward model ( state, up, down ) =
-            Debug.log "Updated QTable Row" <|
-                case model.previousMove of
-                    MoveNone ->
-                        ( state, up, down )
+            case model.previousMove of
+                MoveNone ->
+                    ( state, up, down )
 
-                    MoveUp ->
-                        ( state
-                        , up
-                            + learningRate
-                            * ((reward model)
-                                + discount
-                                + (Maybe.withDefault 0 <| List.maximum [ up, down ])
-                                - up
-                              )
-                        , down
-                        )
+                MoveUp ->
+                    ( state
+                    , up
+                        + learningRate
+                        * ((reward model)
+                            + discount
+                            + (Maybe.withDefault 0 <| List.maximum [ up, down ])
+                            - up
+                          )
+                    , down
+                    )
 
-                    MoveDown ->
-                        ( state
-                        , up
-                        , down
-                            + learningRate
-                            * ((reward model)
-                                + discount
-                                + (Maybe.withDefault 0 <| List.maximum [ up, down ])
-                                - down
-                              )
-                        )
+                MoveDown ->
+                    ( state
+                    , up
+                    , down
+                        + learningRate
+                        * ((reward model)
+                            + discount
+                            + (Maybe.withDefault 0 <| List.maximum [ up, down ])
+                            - down
+                          )
+                    )
 
         updateQTable model =
             List.updateIf (\( state, _, _ ) -> state == model.currentGame.playerPosition) (calculateNewActionReward model) model.qtable
