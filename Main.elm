@@ -16,8 +16,23 @@ type MoveDirection
     | MoveDown
 
 
+type PlayerType
+    = HumanPlayer
+    | AIPlayer
+
+
+playerType : PlayerType
+playerType =
+    HumanPlayer
+
+
+type MoveInfo
+    = Manual MoveDirection
+    | Calculated
+
+
 type Msg
-    = PlayerMove MoveDirection
+    = PlayerMove MoveInfo
     | TogglePause Bool
 
 
@@ -89,7 +104,6 @@ processGameStatus model =
         model
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         TogglePause paused ->
@@ -97,14 +111,25 @@ update msg model =
             , Cmd.none
             )
 
-        PlayerMove direction ->
-            let
-                updatedModel =
-                    model
-                        |> processPlayerMove direction
-                        |> processGameStatus
-            in
-                ( updatedModel, Cmd.none )
+        PlayerMove moveInfo ->
+            case moveInfo of
+                Manual direction ->
+                    let
+                        updatedModel =
+                            model
+                                |> processPlayerMove direction
+                                |> processGameStatus
+                    in
+                        ( updatedModel, Cmd.none )
+
+                Calculated ->
+                    let
+                        updatedModel =
+                            model
+                                |> processPlayerMove MoveUp
+                                |> processGameStatus
+                    in
+                        ( updatedModel, Cmd.none )
 
 
 startNewGame : Game
@@ -153,10 +178,14 @@ calculateDirection keycode =
             MoveNone
 
 
-playerSubscription : Sub msg
-playerSubscription =
-    -- Keyboard.ups calculateDirection
-    Time.every (1 * Time.second) (\_ -> MoveUp)
+playerSubscription : Model -> Sub MoveInfo
+playerSubscription model =
+    case playerType of
+        HumanPlayer ->
+            Keyboard.ups (calculateDirection >> Manual)
+
+        AIPlayer ->
+            Time.every (1 * Time.second) (\_ -> Calculated)
 
 
 subscriptions : Model -> Sub Msg
@@ -164,7 +193,8 @@ subscriptions model =
     if model.paused then
         Sub.none
     else
-        Sub.map PlayerMove playerSubscription
+        playerSubscription model
+            |> Sub.map PlayerMove
 
 
 gameBoardView : Model -> Html Msg
