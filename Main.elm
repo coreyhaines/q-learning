@@ -39,6 +39,7 @@ type alias Game =
 type alias Model =
     { currentGame : Game
     , gameStatus : GameStatus
+    , previousGames : List ( Game, GameOverReason )
     }
 
 
@@ -101,15 +102,12 @@ update msg model =
                 ( updatedModel, Cmd.none )
 
 
-startNewGame : Model
+startNewGame : Game
 startNewGame =
-    { gameStatus = Running
-    , currentGame =
-        { playerPosition = 5
-        , moveCount = 0
-        , holePosition = 0
-        , cheesePosition = 9
-        }
+    { playerPosition = 5
+    , moveCount = 0
+    , holePosition = 0
+    , cheesePosition = 9
     }
 
 
@@ -117,7 +115,10 @@ init : ( Model, Cmd Msg )
 init =
     let
         initialModel =
-            startNewGame
+            { currentGame = startNewGame
+            , gameStatus = Running
+            , previousGames = []
+            }
     in
         ( initialModel
         , Cmd.none
