@@ -112,13 +112,13 @@ processGameStatus model =
     if model.currentGame.playerPosition == model.currentGame.holePosition then
         { model
             | previousGames = ( model.currentGame, FellInHole ) :: model.previousGames
-            , currentGame = startNewGame
+            , currentGame = newGame
             , score = model.score - 1
         }
     else if model.currentGame.playerPosition == model.currentGame.cheesePosition then
         { model
             | previousGames = ( model.currentGame, GotCheese ) :: model.previousGames
-            , currentGame = startNewGame
+            , currentGame = newGame
             , score = model.score + 1
         }
     else
@@ -159,8 +159,8 @@ update msg model =
                 ( updatedModel, Cmd.none )
 
 
-startNewGame : Game
-startNewGame =
+newGame : Game
+newGame =
     { playerPosition = 5
     , moveCount = 0
     , holePosition = 0
@@ -168,27 +168,29 @@ startNewGame =
     }
 
 
+initialModel : Game -> QTable -> Model
+initialModel game qtable =
+    { totalStatus = Running
+    , score = 0
+    , oldScore = 0
+    , oldState = game.playerPosition
+    , randomFloat = ( 0.0, Random.initialSeed 10234 )
+    , nextMove = ( MoveNone, Random.initialSeed 23232 )
+    , previousMove = MoveNone
+    , currentGame = game
+    , previousGames = []
+    , paused = False
+    , qtable = qtable
+    }
+
+
 init : ( Model, Cmd Msg )
 init =
     let
-        newGame =
-            startNewGame
-
-        initialModel =
-            { totalStatus = Running
-            , score = 0
-            , oldScore = 0
-            , oldState = newGame.playerPosition
-            , randomFloat = ( 0.0, Random.initialSeed 10234 )
-            , nextMove = ( MoveNone, Random.initialSeed 23232 )
-            , previousMove = MoveNone
-            , currentGame = newGame
-            , previousGames = []
-            , paused = False
-            , qtable = initialQTable
-            }
+        model =
+            initialModel newGame initialQTable
     in
-        ( initialModel
+        ( model
         , Cmd.none
         )
 
