@@ -399,7 +399,11 @@ processCalculatedPlayerMove model =
                     )
 
         updateQTable model =
-            List.updateIf (\( state, _, _ ) -> state == model.currentGame.playerPosition) (calculateNewActionReward model) model.qtable
+            let
+                updatedQTable =
+                    List.updateIf (\( state, _, _ ) -> state == model.currentGame.playerPosition) (calculateNewActionReward model) model.qtable
+            in
+                { model | qtable = updatedQTable }
 
         getNextFloat model =
             let
@@ -455,8 +459,8 @@ processCalculatedPlayerMove model =
             { model
                 | oldScore = model.score
                 , oldState = model.currentGame.playerPosition
-                , qtable = updateQTable model
             }
+                |> updateQTable
                 |> getNextFloat
                 |> getNextMove
     in
