@@ -146,17 +146,24 @@ update msg model =
         PlayerMove moveInfo ->
             let
                 updatedModel =
-                    (processGameStatus >> processEndStatus) <|
-                        case moveInfo of
-                            Manual direction ->
-                                model
-                                    |> processPlayerMove direction
-
-                            Calculated ->
-                                model
-                                    |> processCalculatedPlayerMove
+                    model
+                        |> processMove moveInfo
+                        |> processGameStatus
+                        |> processEndStatus
             in
                 ( updatedModel, Cmd.none )
+
+
+processMove : MoveInfo -> Model -> Model
+processMove moveInfo model =
+    case moveInfo of
+        Manual direction ->
+            model
+                |> processPlayerMove direction
+
+        Calculated ->
+            model
+                |> processCalculatedPlayerMove
 
 
 newGame : Game
