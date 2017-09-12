@@ -63,7 +63,7 @@ type alias Model =
     , previousMove : MoveDirection
     , oldState : Int
     , randomFloat : Float
-    , nextMove : ( MoveDirection, Seed )
+    , nextMove : MoveDirection
     , randomSeed : Seed
     , totalStatus : TotalStatus
     , currentGame : Game
@@ -183,7 +183,7 @@ initialModel game qtable =
     , oldScore = 0
     , oldState = game.playerPosition
     , randomFloat = 0.0
-    , nextMove = ( MoveNone, Random.initialSeed 23232 )
+    , nextMove = MoveNone
     , randomSeed = Random.initialSeed 1000
     , previousMove = MoveNone
     , currentGame = game
@@ -423,7 +423,7 @@ processCalculatedPlayerMove model =
                                     MoveDown
                             )
             in
-                Random.step generator (Tuple.second model.nextMove)
+                Random.step generator model.randomSeed
 
         findMoveFromQTable model =
             List.find (\( state, _, _ ) -> state == model.currentGame.playerPosition)
@@ -437,21 +437,29 @@ processCalculatedPlayerMove model =
                     )
                 |> Maybe.withDefault MoveNone
 
-        nextMove model =
+        getNextMove model =
             if model.randomFloat > epsilon then
-                randomMove model
+                let
+                    ( move, nextSeed ) =
+                        randomMove model
+                in
+                    { model | nextMove = move, randomSeed = nextSeed }
             else
-                ( findMoveFromQTable model, Tuple.second model.nextMove )
+                let
+                    move =
+                        findMoveFromQTable model
+                in
+                    { model | nextMove = move }
 
         updatedModel model =
             { model
                 | oldScore = model.score
                 , oldState = model.currentGame.playerPosition
                 , qtable = updateQTable model
-                , nextMove = nextMove model
             }
                 |> getNextFloat
+                |> getNextMove
     in
         model
             |> updatedModel
-            |> processPlayerMove (Tuple.first model.nextMove)
+            |> processPlayerMove model.nextMove
