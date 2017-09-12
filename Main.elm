@@ -62,8 +62,9 @@ type alias Model =
     , oldScore : Int
     , previousMove : MoveDirection
     , oldState : Int
-    , randomFloat : ( Float, Seed )
+    , randomFloat : Float
     , nextMove : ( MoveDirection, Seed )
+    , randomSeed : Seed
     , totalStatus : TotalStatus
     , currentGame : Game
     , previousGames : List ( Game, GameOverReason )
@@ -181,8 +182,9 @@ initialModel game qtable =
     , score = 0
     , oldScore = 0
     , oldState = game.playerPosition
-    , randomFloat = ( 0.0, Random.initialSeed 10234 )
+    , randomFloat = 0.0
     , nextMove = ( MoveNone, Random.initialSeed 23232 )
+    , randomSeed = Random.initialSeed 1000
     , previousMove = MoveNone
     , currentGame = game
     , previousGames = []
@@ -399,12 +401,15 @@ processCalculatedPlayerMove model =
         updateQTable model =
             List.updateIf (\( state, _, _ ) -> state == model.currentGame.playerPosition) (calculateNewActionReward model) model.qtable
 
-        nextFloat model =
+        getNextFloat model =
             let
-                generator =
-                    Random.float 0 1
+                ( nextFloat, nextSeed ) =
+                    Random.step (Random.float 0 1) model.randomSeed
             in
-                Random.step generator (Tuple.second model.randomFloat)
+                { model
+                    | randomFloat = nextFloat
+                    , randomSeed = nextSeed
+                }
 
         randomMove model =
             let
@@ -433,7 +438,7 @@ processCalculatedPlayerMove model =
                 |> Maybe.withDefault MoveNone
 
         nextMove model =
-            if (Tuple.first model.randomFloat) > epsilon then
+            if model.randomFloat > epsilon then
                 randomMove model
             else
                 ( findMoveFromQTable model, Tuple.second model.nextMove )
@@ -443,9 +448,9 @@ processCalculatedPlayerMove model =
                 | oldScore = model.score
                 , oldState = model.currentGame.playerPosition
                 , qtable = updateQTable model
-                , randomFloat = nextFloat model
                 , nextMove = nextMove model
             }
+                |> getNextFloat
     in
         model
             |> updatedModel
